@@ -1,0 +1,17 @@
+{
+  "run_id": "dd5264c8-bc82-4799-b967-6eceb0786edb",
+  "table": "orphan_orders_check",
+  "engine": "pandas",
+  "completed_at": "2026-08-23T19:48:18.415055+00:00",
+  "rules": [
+    {
+      "rule_code": "custom.orphan_orders_check.custom_query_check",
+      "rule_type": "custom_query_check",
+      "table": "orphan_orders_check",
+      "column": "multiple",
+      "status": "fail",
+      "severity": "critical",
+      "details": "1 violating row(s) found"
+    }
+  ]
+}

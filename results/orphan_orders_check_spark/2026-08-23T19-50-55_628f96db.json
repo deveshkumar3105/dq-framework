@@ -1,0 +1,17 @@
+{
+  "run_id": "628f96db-d0dd-4b08-949b-26e4489928d7",
+  "table": "orphan_orders_check_spark",
+  "engine": "spark",
+  "completed_at": "2026-08-23T19:50:55.508422+00:00",
+  "rules": [
+    {
+      "rule_code": "custom.orphan_orders_check_spark.custom_query_check",
+      "rule_type": "custom_query_check",
+      "table": "orphan_orders_check_spark",
+      "column": "multiple",
+      "status": "fail",
+      "severity": "critical",
+      "details": "1 violating row(s) found"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+custom_checks:
+  - name: orphan_orders_check
+    engine: pandas
+    severity: critical
+    tables:
+      orders: data/orders_with_fk.csv
+      customers: data/customers_master.csv
+    query: |
+      SELECT o.order_id
+      FROM orders o
+      LEFT JOIN customers c ON o.customer_id = c.customer_id
+      WHERE c.customer_id IS NULL
