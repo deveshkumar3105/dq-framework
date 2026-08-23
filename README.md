@@ -1,8 +1,8 @@
 # Data Quality Framework
 
 A lightweight, config-driven data quality framework. Define checks (null, uniqueness, etc.) 
-against tables in YAML, run them against pandas or Spark, and get structured, grouped pass/fail 
-results with logging.
+against tables in YAML, run them against pandas or Spark, and get structured, grouped, 
+severity-tagged pass/fail results.
 
 ## What it does today
 
@@ -11,13 +11,15 @@ results with logging.
 - **Auto-detects** which engine to use based on file size, or you can force one explicitly in config
 - Config-driven: add checks by editing YAML, not code — each config is fully self-contained 
   (includes its own data source path)
+- Checks support **multiple columns** per rule, or `"*"` to apply a rule to every column in the table
+- Each rule can be tagged with a **severity** (`critical` or `warning`) — critical failures 
+  log at ERROR level, warnings log at WARNING level
 - Runs via CLI: `python -m engine.runner --config <path>`
 - Colored console logging for readability
-- Results grouped by run and persisted to `results.jsonl` — one JSON record per table run, 
-  containing all rule results nested inside, each with a stable `rule_code`
+- Results are grouped per run and written to **per-table folders** under `results/`, 
+  one file per run — see Results storage below
 
 ## Project structure
-
 dq-framework/
 ├── engine/
 │   ├── checks/              # Check definitions (engine-agnostic) - null_check, uniqueness_check
@@ -30,12 +32,15 @@ dq-framework/
 │   │   └── registry.py      # Maps (engine, check_type) -> implementation
 │   ├── selector.py          # Decides pandas vs spark per run (explicit or auto)
 │   ├── defaults.yaml        # Auto-detection thresholds
+│   ├── utils.py             # Column resolution (explicit list vs "*")
 │   ├── runner.py            # Orchestrates: config -> engine -> checks -> storage. CLI entrypoint.
-│   ├── storage.py           # Writes one grouped record per run to results.jsonl
+│   ├── storage.py           # Writes results per run (per-table folder + legacy jsonl)
 │   └── notifier.py          # Not yet implemented (currently commented out in runner)
 ├── configs/                 # One YAML per table, self-contained (includes data_path + checks)
 │   └── sales/
 ├── data/                    # Sample CSVs used for local testing
+├── results/                 # Generated run results, one subfolder per table (gitignored)
+├── results.jsonl            # LEGACY - flat single-file results log (gitignored, being phased out)
 ├── log_handler/             # Logging setup + colored formatter, separate from runner
 ├── tests/
 │   └── unit/                # Minimal — mostly TODO (see Limitations)
@@ -79,14 +84,30 @@ done
 
 ```yaml
 table: orders
-engine: auto              # "auto" | "pandas" | "spark"
+engine: auto                    # "auto" | "pandas" | "spark"
 data_path: data/orders.csv
 checks:
   - type: null_check
-    column: order_id
+    columns: [order_id]         # explicit list of columns
+    severity: critical          # "critical" | "warning" (defaults to "warning" if omitted)
+  - type: null_check
+    columns: "*"                # applies this rule to every column in the table
+    severity: warning
   - type: uniqueness_check
-    column: order_id
+    columns: [order_id]
+    severity: critical
 ```
+
+### Columns
+- A YAML list — e.g. `columns: [order_id, customer]` — applies the rule to each named column
+- `"*"` — applies the rule to every column present in the loaded data at run time. 
+  Resolved dynamically (via `engine/utils.py`), so it always reflects the table's actual 
+  current schema, not a hardcoded list
+
+### Severity
+- `critical` — a failure logs at ERROR level
+- `warning` (default) — a failure logs at WARNING level
+- Currently affects logging only; does not yet block a run or pipeline (planned)
 
 ## Adding a new check to an existing table
 
@@ -113,9 +134,25 @@ size_threshold_mb: 500
 default_engine: pandas
 ```
 
-## Results format
+## Results storage
 
-Each run produces one grouped JSON record in `results.jsonl`:
+Each run writes a grouped JSON record containing every rule's result (including `rule_code`, 
+`rule_type`, `column`, `status`, `severity`, `details`), to **two locations currently**:
+
+**1. Primary — per-table folder structure (current standard):**
+results/
+├── orders/
+│   └── 2026-08-24T09-12-05_a1b2c3d4.json
+├── customers/
+│   └── 2026-08-23T23-58-02_e5f6g7h8.json
+One file per run, grouped by table folder, filename includes timestamp + short run ID.
+
+**2. Legacy — `results.jsonl` (TODO: remove):**
+A flat file at the project root, one line per run, kept temporarily alongside the new 
+structure during the transition. **Do not build new tooling against this file** — it will 
+be removed once the per-table structure is confirmed stable and nothing depends on the old format.
+
+Example record shape (same shape written to both locations):
 ```json
 {
   "run_id": "...",
@@ -123,19 +160,23 @@ Each run produces one grouped JSON record in `results.jsonl`:
   "engine": "spark",
   "completed_at": "...",
   "rules": [
-    {"rule_code": "orders.order_id.null_check", "rule_type": "null_check", "column": "order_id", "status": "fail", "details": "1 nulls found"},
-    {"rule_code": "orders.order_id.uniqueness_check", "rule_type": "uniqueness_check", "column": "order_id", "status": "fail", "details": "1 duplicates found"}
+    {"rule_code": "orders.order_id.null_check", "rule_type": "null_check", "column": "order_id", "status": "fail", "severity": "critical", "details": "1 nulls found"}
   ]
 }
 ```
 `rule_code` is deterministic (`table.column.rule_type`), so the same logical rule can be 
 tracked across multiple runs over time.
 
+Both `results/` and `results.jsonl` are gitignored — they're generated output, not source.
+
 ## Known limitations (current state, not final design)
 
-- **No database** — results are stored in a flat `results.jsonl` file, no run history querying UI, 
-  no dashboard (a basic query/reader script is planned)
+- **`results.jsonl` is legacy and dual-written temporarily** — see Results storage above; 
+  will be removed once migration is confirmed complete
+- **No database** — results live on the filesystem; no run history querying UI or dashboard yet 
+  (a basic query/reader script is planned)
 - **No notifier** — failures are logged to console only, no Slack/email integration yet
+- **Severity doesn't block runs yet** — it only affects log level; blocking behavior is planned
 - **One config per CLI run** — no directory auto-discovery yet (`--config-dir` planned)
 - **Only two check types** exist so far: null_check, uniqueness_check
 - **Only CSV sources** supported — database connectors (Oracle, Snowflake) are planned, 
@@ -150,9 +191,7 @@ tracked across multiple runs over time.
 - `executors/` defines *how* to compute a check on a specific engine — one file per check, per engine
 - `connectors/` defines *how* to load data for a specific engine
 - `selector.py` is the only place that decides which engine runs a given job
-- This split exists so adding a new engine or a new check never requires touching unrelated code
-Push it
-bashcd ~/Documents/DataEngineeringProject/DataQuality/dq-framework
-git add README.md
-git commit -m "docs: update README with CLI usage, config format, and current limitations"
-git push
+- `utils.py` resolves column specs (`columns: [...]` or `columns: "*"`) before checks are built — 
+  the `Check` classes themselves always operate on one resolved column, they're unaware `*` exists
+- This split exists so adding a new engine, check, or config feature never requires touching 
+  unrelated code

@@ -3,6 +3,6 @@ engine: auto
 data_path: data/customers.csv
 checks:
   - type: null_check
-    column: customer_id
+    columns: [customer_id]
   - type: uniqueness_check
-    column: customer_id
+    columns: [customer_id]

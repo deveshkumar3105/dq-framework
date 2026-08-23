@@ -1,0 +1,62 @@
+{
+  "run_id": "6ba267bc-81c9-4f6f-922b-51fa01f653b9",
+  "table": "products",
+  "engine": "spark",
+  "completed_at": "2026-08-23T18:50:12.160405+00:00",
+  "rules": [
+    {
+      "rule_code": "products.product_id.null_check",
+      "rule_type": "null_check",
+      "table": "products",
+      "column": "product_id",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "products.product_name.null_check",
+      "rule_type": "null_check",
+      "table": "products",
+      "column": "product_name",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "products.product_id.null_check",
+      "rule_type": "null_check",
+      "table": "products",
+      "column": "product_id",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "products.product_name.null_check",
+      "rule_type": "null_check",
+      "table": "products",
+      "column": "product_name",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "products.category.null_check",
+      "rule_type": "null_check",
+      "table": "products",
+      "column": "category",
+      "status": "pass",
+      "severity": "warning",
+      "details": "0 nulls found"
+    },
+    {
+      "rule_code": "products.product_id.uniqueness_check",
+      "rule_type": "uniqueness_check",
+      "table": "products",
+      "column": "product_id",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 duplicates found"
+    }
+  ]
+}

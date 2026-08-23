@@ -1,0 +1,6 @@
+product_id,product_name,category
+101,Widget A,Hardware
+102,Widget B,Hardware
+102,Widget C,Hardware
+103,,Software
+,Widget D,Software

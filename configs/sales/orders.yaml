@@ -3,6 +3,6 @@ engine: spark
 data_path: data/orders.csv
 checks:
   - type: null_check
-    column: order_id
+    columns: [order_id]
   - type: uniqueness_check
-    column: order_id
+    columns: [order_id]

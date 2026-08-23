@@ -17,5 +17,6 @@ class NullCheck(Check):
             table=self.table,
             column=self.column,
             status=status,
+            severity=self.severity,
             details=f"{null_count} nulls found",
         )

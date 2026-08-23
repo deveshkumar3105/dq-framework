@@ -1,0 +1,16 @@
+table: orders
+engine: spark
+data_path: data/orders.csv
+checks:
+  - type: null_check
+    columns: [order_id]
+    severity: critical
+  - type: uniqueness_check
+    columns: [order_id]
+    severity: critical
+  - type: null_check
+    columns: [customer]
+    severity: warning
+  - type: null_check
+    columns: "*"
+    severity: warning

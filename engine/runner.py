@@ -8,6 +8,7 @@ from .checks.null_check import NullCheck
 from .checks.uniqueness_check import UniquenessCheck
 from .selector import decide_engine, get_connector_for_engine
 from .storage import ResultStorage
+from .utils import resolve_columns
 from log_handler.config import configure_logging
 # from .notifier import Notifier TODO: Uncomment this line when Notifier is implemented
 
@@ -43,7 +44,7 @@ def run(config_path: str):
             config = yaml.safe_load(f)
 
         data_path = _resolve_path(config["data_path"])
-        logger.info("Loaded config for table '%s' with %s checks", config["table"], len(config.get("checks", [])))
+        logger.info("Loaded config for table '%s' with %s check rules", config["table"], len(config.get("checks", [])))
 
         engine_name = decide_engine(config, data_path)
         connector_cls = get_connector_for_engine(engine_name)
@@ -53,25 +54,48 @@ def run(config_path: str):
         logger.info("Loaded data from %s using '%s' connector", data_path, engine_name)
 
         storage = ResultStorage()
-        results = []  # CHANGED: collect results instead of saving immediately
+        results = []
         # notifier = Notifier() TODO: Uncomment this line when Notifier is implemented
 
-        for index, rule in enumerate(config["checks"], start=1):
+        rule_number = 0
+        total_rules = sum(len(resolve_columns(data, rule["columns"])) for rule in config["checks"])
+
+        for rule in config["checks"]:
             check_type = rule["type"]
-            logger.info("Executing rule %s/%s: %s for column '%s'", index, len(config["checks"]), check_type, rule["column"])
+            severity = rule.get("severity", "warning")
+            resolved_columns = resolve_columns(data, rule["columns"])
 
-            check_cls = CHECK_REGISTRY[check_type]
-            check = check_cls(table=config["table"], column=rule["column"], engine_name=engine_name)
-            result = check.run(data)
-            results.append(result)  # CHANGED: no longer storage.save(result) here
+            for column in resolved_columns:
+                rule_number += 1
+                logger.info(
+                    "Executing rule %s/%s: %s for column '%s' (severity=%s)",
+                    rule_number, total_rules, check_type, column, severity,
+                )
 
-            if result.status == "pass":
-                logger.info("Rule %s/%s passed: %s (%s)", index, len(config["checks"]), check_type, result.details)
-            else:
-                logger.warning("Rule %s/%s failed: %s (%s)", index, len(config["checks"]), check_type, result.details)
-            # notifier.notify(result) TODO: Uncomment this line when Notifier is implemented
+                check_cls = CHECK_REGISTRY[check_type]
+                check = check_cls(
+                    table=config["table"],
+                    column=column,
+                    engine_name=engine_name,
+                    severity=severity,
+                )
+                result = check.run(data)
+                results.append(result)
 
-        storage.save_run(table=config["table"], engine=engine_name, results=results)  # NEW: batched write, step 5
+                if result.status == "pass":
+                    logger.info(
+                        "Rule %s/%s passed: %s (%s)",
+                        rule_number, total_rules, check_type, result.details,
+                    )
+                else:
+                    log_fn = logger.error if severity == "critical" else logger.warning
+                    log_fn(
+                        "Rule %s/%s failed [%s]: %s (%s)",
+                        rule_number, total_rules, severity, check_type, result.details,
+                    )
+                # notifier.notify(result) TODO: Uncomment this line when Notifier is implemented
+
+        storage.save_run(table=config["table"], engine=engine_name, results=results)
         logger.info("Completed data quality run for %s", config_path)
     except Exception:
         logger.exception("Data quality run failed for %s", config_path)

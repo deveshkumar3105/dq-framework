@@ -1,0 +1,10 @@
+table: products
+engine: spark
+data_path: data/products.csv
+checks:
+  - type: null_check
+    columns: [product_id, product_name]
+  - type: null_check
+    columns: "*"
+  - type: uniqueness_check
+    columns: [product_id]

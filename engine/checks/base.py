@@ -9,14 +9,16 @@ class CheckResult:
     table: str
     column: str
     status: str
+    severity: str = "warning"
     details: str = ""
 
 
 class Check(ABC):
-    def __init__(self, table: str, column: str, engine_name: str, **params):
+    def __init__(self, table: str, column: str, engine_name: str, severity: str = "warning", **params):
         self.table = table
         self.column = column
         self.engine_name = engine_name
+        self.severity = severity
         self.params = params
 
     @property

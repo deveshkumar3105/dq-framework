@@ -1,0 +1,62 @@
+{
+  "run_id": "bfe9dbc8-916c-4d0f-bf69-443c8cb1d4ab",
+  "table": "orders",
+  "engine": "spark",
+  "completed_at": "2026-08-23T18:50:59.282055+00:00",
+  "rules": [
+    {
+      "rule_code": "orders.order_id.null_check",
+      "rule_type": "null_check",
+      "table": "orders",
+      "column": "order_id",
+      "status": "fail",
+      "severity": "critical",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "orders.order_id.uniqueness_check",
+      "rule_type": "uniqueness_check",
+      "table": "orders",
+      "column": "order_id",
+      "status": "fail",
+      "severity": "critical",
+      "details": "1 duplicates found"
+    },
+    {
+      "rule_code": "orders.customer.null_check",
+      "rule_type": "null_check",
+      "table": "orders",
+      "column": "customer",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "orders.order_id.null_check",
+      "rule_type": "null_check",
+      "table": "orders",
+      "column": "order_id",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "orders.customer.null_check",
+      "rule_type": "null_check",
+      "table": "orders",
+      "column": "customer",
+      "status": "fail",
+      "severity": "warning",
+      "details": "1 nulls found"
+    },
+    {
+      "rule_code": "orders.amount.null_check",
+      "rule_type": "null_check",
+      "table": "orders",
+      "column": "amount",
+      "status": "pass",
+      "severity": "warning",
+      "details": "0 nulls found"
+    }
+  ]
+}
